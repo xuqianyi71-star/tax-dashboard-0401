@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>跨境电商综合看板 | 复活节指标 · VAT策略 · 结账链路 · 核心业务趋势 (时间轴精确到日期)</title>
+    <!-- Chart.js & ECharts 双库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.staticfile.org/echarts/5.4.3/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f1f5f9; font-family: 'Inter', 'Segoe UI', 'Roboto', system-ui, sans-serif; padding: 24px 20px; color: #0f172a; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; }
+        .panel-tabs { display: flex; justify-content: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+        .tab-btn { background: white; border: none; padding: 12px 28px; font-size: 1rem; font-weight: 600; border-radius: 60px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.25s ease; color: #334155; border: 1px solid #e2e8f0; }
+        .tab-btn.active { background: #1e293b; color: white; border-color: #1e293b; box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .panel { display: none; animation: fade 0.2s ease; }
+        .panel.active-panel { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+        .card-white { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05); overflow: hidden; margin-bottom: 24px; }
+        .avg-container { display: flex; justify-content: center; gap: 24px; margin: 20px auto 28px; flex-wrap: wrap; }
+        .avg-card { background: white; border-radius: 24px; padding: 12px 24px; min-width: 160px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-top: 4px solid; }
+        .avg-2026 { border-top-color: #1e293b; }
+        .avg-2025-same { border-top-color: #2563eb; }
+        .avg-2025-easter { border-top-color: #dc2626; }
+        .avg-label { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .avg-value { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+        .legend { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; margin-bottom: 20px; background: white; padding: 10px 20px; border-radius: 40px; width: fit-content; margin-left: auto; margin-right: auto; }
+        .legend-item { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500; }
+        .legend-color { width: 28px; height: 4px; border-radius: 2px; }
+        .legend-color.dashed { background: repeating-linear-gradient(90deg, currentColor, currentColor 6px, transparent 6px, transparent 12px); }
+        .chart-wrapper { position: relative; height: 460px; width: 100%; padding: 12px 12px 0 12px; }
+        .slicer { background: white; padding: 8px 24px; border-radius: 40px; display: inline-flex; align-items: center; gap: 12px; margin: 10px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        select { font-size: 0.95rem; padding: 8px 16px; border-radius: 32px; border: 1px solid #cbd5e1; background: white; font-weight: 500; cursor: pointer; }
+        .analysis-report, .insight-card1 { background: white; padding: 28px; border-radius: 24px; margin-top: 20px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
+        .report-header { border-left: 4px solid #1890ff; padding-left: 16px; margin-bottom: 24px; }
+        .report-header h2 { font-size: 1.4rem; margin-bottom: 6px; }
+        .sub-section-title { font-size: 1.1rem; font-weight: 700; margin: 28px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 16px 0; }
+        .data-table th { background: #f8fafc; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        .data-table td { padding: 12px; border-bottom: 1px solid #eef2f6; vertical-align: top; }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; color: white; }
+        .tag-easter { background: #52c41a; }
+        .tag-mother { background: #eb2f96; }
+        .tag-normal { background: #fa8c16; }
+        .threshold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .threshold-box { background: #fef9e6; padding: 16px; border-radius: 20px; border-left: 4px solid #ff9800; }
+        .insight-card2 { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); border-top: 4px solid #1890ff; }
+        .insight-card2.warning { border-top-color: #ff4d4f; }
+        .insight-card2.success { border-top-color: #52c41a; }
+        footer { text-align: center; font-size: 0.7rem; color: #64748b; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+        .echarts-box { width: 100%; height: 520px; background: white; border-radius: 24px; padding: 16px; }
+        .core-metrics-container { background: white; border-radius: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); margin-bottom: 24px; overflow: hidden; }
+        .core-metrics-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 20px 24px 0 24px; gap: 16px; }
+        .core-metrics-header h3 { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+        .core-chart-wrapper { height: 460px; width: 100%; padding: 12px 12px 8px 12px; }
+        @media (max-width: 700px) { body { padding: 16px 12px; } .chart-wrapper { height: 300px; } .avg-value { font-size: 1.2rem; } .tab-btn { padding: 8px 20px; font-size: 0.85rem; } .core-chart-wrapper { height: 320px; } }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="panel-tabs">
+        <button class="tab-btn active" data-panel="panel1">🐣 复活节指标对比 (Day1~20)</button>
+        <button class="tab-btn" data-panel="panel2">📉 VAT策略复盘 · 调价深度</button>
+        <button class="tab-btn" data-panel="panel3">🔗 结账全链路转化监测</button>
+    </div>
+
+    <!-- 面板1：复活节大促核心指标对比 (保持原有Day1~20标签，不变) -->
+    <div id="panel1" class="panel active-panel">
+        <div class="card-white" style="padding: 20px 20px 12px 20px;">
+            <h1 style="font-size: 1.6rem; text-align: center;">📈 复活节大促核心指标对比 (2026 vs 2025同期)</h1>
+            <div style="text-align: center; color: #475569; margin-bottom: 12px;">2026年（实线） vs 2025年同日期（蓝虚线） vs 2025年复活节同期（红虚线）| 数据范围Day1~Day20</div>
+            <div style="display: flex; justify-content: center;"><div class="slicer"><label>📌 指标切片器：</label><select id="metric-selector"><option value="加购率">加购率</option><option value="转化率">转化率</option><option value="CK率">CK率</option><option value="提交订单率">提交订单率</option><option value="支付成功率">支付成功率</option></select></div></div>
+            <div class="avg-container" id="avg-container"><div class="avg-card avg-2026"><div class="avg-label">📊 2026年 平均值</div><div class="avg-value" id="avg-2026">--</div></div><div class="avg-card avg-2025-same"><div class="avg-label">🔵 2025年同日期 平均值</div><div class="avg-value" id="avg-2025-same">--</div></div><div class="avg-card avg-2025-easter"><div class="avg-label">🔴 2025年复活节同期 平均值</div><div class="avg-value" id="avg-2025-easter">--</div></div></div>
+            <div class="legend"><div class="legend-item"><span class="legend-color solid" style="color:#1e293b;"></span> 2026年（实线）</div><div class="legend-item"><span class="legend-color dashed" style="color:#2563eb;"></span> 2025年同日期（蓝色虚线）</div><div class="legend-item"><span class="legend-color dashed" style="color:#dc2626;"></span> 2025年复活节同期（红色虚线）</div></div>
+            <div class="chart-wrapper"><canvas id="easter-chart-canvas" style="width:100%; height:100%; display: block;"></canvas></div>
+            <footer>数据周期：Day1~Day20 (完整大促窗口) | 平均值基于20天计算 | 数据源：复活节.xlsx 精准同步</footer>
+        </div>
+    </div>
+
+    <!-- 面板2：VAT策略复盘 + 核心指标趋势(含新增CPC指标) -->
+    <div id="panel2" class="panel">
+        <div class="card-white" style="padding: 8px;"><div id="vat-strategy-chart" class="echarts-box"></div></div>
+
+        <!-- 核心业务指标趋势（基于Excel数据，扩展至Day20 + CPC指标） -->
+        <div class="core-metrics-container">
+            <div class="core-metrics-header">
+                <h3>📊 核心业务指标趋势</h3>
+                <div class="slicer" style="margin:0;"><span>🔍 指标切片器：</span>
+                    <select id="coreMetricSelector">
+                        <option value="浏览人数">👁️ 浏览人数</option>
+                        <option value="销售额">💰 销售额 ($)</option>
+                        <option value="客单价">🛒 客单价 ($)</option>
+                        <option value="ROI">📈 ROI (投产比)</option>
+                        <option value="毛利润">💷 毛利润 ($)</option>
+                        <option value="FBCPC">📱 FB CPC ($)</option>
+                        <option value="谷歌CPC">🔎 谷歌CPC ($)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="core-metrics-trend-chart" class="core-chart-wrapper"></div>
+            <footer style="margin-top:0; padding:8px 0 16px;">数据周期：基准(税前) + 3月12日~3月31日 (Day1~Day20) | 包含222.xlsx与333.xlsx扩展指标</footer>
+        </div>
+
+        <!-- 原有深度分析报告 (SKU/调价策略保持不变) -->
+        <div class="analysis-report">
+            <div class="report-header">
+                <h2>英国站跨境电商：3.16 调价表现深度分析报告 (SKU 详版)</h2>
+                <p>宏观背景：3.12 首次加税导致加购 -46.7% / 转化 -53.05% | 3.16 实施价格回调策略</p>
+            </div>
+            <div class="sub-section-title">📊 重点品类 SKU 具体表现分析 (3.16调价后)</div>
+            <table class="data-table">
+                <thead>汽<th>品类属性</th><th>SKU</th><th>加税前流量</th><th>调价后转化(2d)</th><th>表现分析与逻辑</th> </thead>
+                <tbody>
+                     <tr><td rowspan="2"><span class="tag tag-easter">复活节刚需</span></td><td><b>PG3753</b></td><td>2873</td><td style="color:#52c41a">5.47%</td><td><b>标杆产品：</b>流量全场最高。调价回调后转化率从1.93%爆发增长，节日“执念”对冲价格敏感度。</td></tr>
+                     <tr><td><b>PG3648</b></td><td>160</td><td style="color:#52c41a">6.67%</td><td><b>小爆款：</b>转化率从2.5%跃升至6.67%，搪瓷杯/篮回调后转化粘性极高。</td></tr>
+                     <tr><td rowspan="2"><span class="tag tag-mother">母亲节错位</span></td><td><b>PL250617</b></td><td>1455</td><td>4.00%</td><td>虽跨档但乏力：流量巨大，转化回升但未及税前5.7%。节日已过购买动机减弱。</td></tr>
+                     <tr><td><b>CBF176</b></td><td>201</td><td style="color:#ff4d4f">0.00%</td><td><b>负面典型：</b>跨档调价后转化仍为0，过季礼赠产品对价格刺激免疫。</td></tr>
+                     <tr><td rowspan="2"><span class="tag tag-normal">常规款/无属性</span></td><td><b>PG3718</b></td><td>276</td><td>1.57%</td><td>慢热型：自带流量但调价后转化偏低，需落地页优化。</td></tr>
+                     <tr><td><b>CAJJ252399</b></td><td>240</td><td>2.08%</td><td>稳步回升：常规款对波动不如节日款敏感，价格微调止损支撑。</td></tr>
+                </tbody>
+             </table>
+            <div class="sub-section-title">⚖️ 跨档调价 (Cross-Bracket) 心理机制分析</div>
+            <table class="data-table">
+                <thead><tr><th>类型</th><th>代表 SKU</th><th>调价动作</th><th>转化率变化</th><th>核心结论</th></tr></thead>
+                <tbody>
+                     <tr><td><b>成功跨档</b></td><td>PL250617</td><td>$23 → $19</td><td style="color:#52c41a">加购率+18.94%</td><td>成功撤回至 $20+ 档位，弥补加购率损失。</td></tr>
+                     <tr><td><b>失败跨档</b></td><td>CBF176</td><td>$41 → $37</td><td style="color:#ff4d4f">0.45% → 0%</td><td>虽跨入30+档位，高客单价高压区且节日红利消失。</td></tr>
+                     <tr><td><b>未跨档回补</b></td><td>PG3753</td><td>维持 $16-$19</td><td style="color:#52c41a">+183%</td><td><b>$19.99 是生死线。</b> 只要不破$20心理防线，配合刚需转化回升最陡。</td></tr>
+                </tbody>
+             </table>
+            <div class="sub-section-title">🧠 英国站关键价格阈值总结</div>
+            <div class="threshold-grid">
+                <div class="threshold-box"><b>$19.99 阈值（轻小定制生命线）</b><p>一旦加税后基础价突破$20，转化率平均跌幅＞60%。3.16调价压回$19以内是维持规模核心点。</p></div>
+                <div class="threshold-box"><b>$24.99 阈值（进阶家居门槛）</b><p>进阶饰品/家居门槛，调价后落在$26附近吃力，向$24.99靠拢更具竞争力。</p></div>
+            </div>
+            <div style="margin: 40px 0 20px 0; border-top: 2px dashed #e2e8f0;"></div>
+            <div class="report-header" style="margin-bottom: 16px;">
+                <h2 style="font-size: 1.3rem;">🔄 3.20 二次调价补充深度分析 (复活节爆发期数据)</h2>
+                <p>基于复活节临近需求井喷 & 二次阶梯优化，重点SKU表现复盘及转化陷阱诊断</p>
+            </div>
+            <div class="sub-section-title">🐰 复活节属性 (Easter Specials)：强刚需带动爆发</div>
+            <table class="data-table">
+                <thead><tr><th>SKU</th><th>属性</th><th>调价后流量</th><th>调价后转化率(2日)</th><th>表现分析</th></tr></thead>
+                <tbody>
+                     <tr><td><b>PG3753</b></td><td><span class="tag tag-easter">复活节刚需</span></td><td>1843</td><td style="color:#52c41a">5.47%</td><td><b>标杆产品</b>：流量全场最高，回调后转化率爆发式增长，超加税前水平。</td></tr>
+                     <tr><td><b>PG3648</b></td><td><span class="tag tag-easter">复活节刚需</span></td><td>105</td><td style="color:#52c41a">6.67%</td><td><b>小爆款</b>：转化率从2.5%跃升至6.67%，表现出极高的转化粘性。</td></tr>
+                     <tr><td><b>PG3727</b></td><td><span class="tag tag-easter">复活节刚需</span></td><td>130</td><td style="color:#52c41a">7.69%</td><td><b>阶梯优化成功</b>：修正错误阶梯价后转化率大幅提升，组合购买需求旺盛。</td></tr>
+                </tbody>
+             </table>
+            <div class="sub-section-title">📦 常规品类 (General Goods)：价格敏感度高，风险并存</div>
+            <table class="data-table">
+                <thead><tr><th>SKU</th><th>属性</th><th>调价后流量</th><th>调价后转化率(2日)</th><th>表现分析</th></tr></thead>
+                <tbody>
+                     <tr><td><b>CAPS242366</b></td><td>医护用具</td><td>598</td><td style="color:#ff4d4f">1.00%</td><td><b>调价失败案例</b>：降价引流显著(+46.6%)，但转化率暴跌，上税负面感官未对冲。</td></tr>
+                     <tr><td><b>CAJJ260467</b></td><td>印章/办公</td><td>278</td><td>4.32%</td><td><b>规格引导</b>：下调基础价并配合尺寸溢价，转化率在3.16后有所回升。</td></tr>
+                     <tr><td><b>PG3402</b></td><td>首饰项链</td><td>140</td><td style="color:#ff4d4f">0%</td><td><b>负面反馈</b>：调价后转化直接归零，警惕降价未跨越心理档位产生“低质”错觉。</td></tr>
+                </tbody>
+             </table>
+            <div class="sub-section-title">✂️ 流量与转化的“剪刀差”深度诊断</div>
+            <ul class="diagnostic-list" style="background:#f8fafc; padding: 20px 28px; border-radius: 20px; margin: 12px 0;">
+                <li><strong>引流误区</strong>：调价动作吸引了大量“价格敏感”用户点击，但结算页含税总价依然高于用户心理预期，导致高流量低转化。</li>
+                <li><strong>决策延迟</strong>：频繁调价导致老客户观望，期待复活节正日有更大折扣，延迟下单。</li>
+                <li><strong>视觉权重失位</strong>：常规品类在降价后缺乏“限时/促销”视觉背书，难以触发冲动消费，加购后流失严重。</li>
+            </ul>
+            <div class="sub-section-title">🎯 定价逻辑思考：成功与失败案例深度对比</div>
+            <div class="case-compare-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin:20px 0;">
+                <div class="case-card success" style="background:#f6ffed; border-radius:20px; padding:20px;">
+                    <h4>✅ 成功案例：PG3727 (复活节篮子) —— 修复阶梯逻辑</h4>
+                    <p><span class="metric-badge">策略</span> 引入明确数量阶梯：20；39；57…155，多买多省对冲上税感官。</p>
+                    <table style="width:100%; margin-top: 12px; font-size:0.8rem; border-collapse:collapse;"><tr style="background:#e9f5e9;"><th>指标</th><th>调价前(3.17-3.19)</th><th>调价后(3.20+)</th><th>变化幅度</th></tr>
+                    <tr><td>转化率</td><td>4.41%</td><td style="color:#52c41a; font-weight:bold;">7.69%</td><td style="color:#52c41a">+74.4%</td></tr>
+                    <tr><td>加购率</td><td>8.91%</td><td style="color:#52c41a; font-weight:bold;">12.31%</td><td style="color:#52c41a">+38.1%</td></tr></table>
+                    <p style="margin-top: 12px;"><strong>启示：</strong>复活节商品具有明显“家庭采购”属性，合理的数量阶梯有效对冲税负感官，激活批量购买。</p>
+                </div>
+                <div class="case-card fail" style="background:#fff2f0; border-radius:20px; padding:20px;">
+                    <h4>❌ 失败案例：CAPS242366 (医护用具) —— 上税后的转化陷阱</h4>
+                    <p><span class="metric-badge">策略</span> 试图通过设置15/27/34/41/46梯度缓解单件涨价压力，但收效甚微。</p>
+                    <table style="width:100%; margin-top: 12px; font-size:0.8rem; border-collapse:collapse;"><tr style="background:#ffeaea;"><th>指标</th><th>上税前</th><th>调价后(2日)</th><th>变化幅度</th></tr>
+                    <tr><td>转化率</td><td>6.92%</td><td style="color:#ff4d4f; font-weight:bold;">1.00%</td><td style="color:#ff4d4f">-85.5%</td></tr>
+                    <tr><td>浏览人数</td><td>408</td><td>598</td><td style="color:#fa8c16">+46.6% (无效引流)</td></tr></table>
+                    <p style="margin-top: 12px;"><strong>诊断分析：</strong>医护用具属于刚需但不紧急品类，用户对$1波动极其敏感，阶梯价无法抵消“基础价格变贵”的首要感知。频繁调价损害客群忠诚度，导致转化冰点。</p>
+                </div>
+            </div>
+            <div class="insight-note" style="background:#eef2ff; padding:18px; border-radius:20px;">
+                <strong>📌 3.20 二次调价核心洞察</strong><br/>
+                • 复活节刚需品通过阶梯定价与心理档位保护（≤$19.99）实现了强势反弹，PG3727加购率飙升38%。<br/>
+                • 常规/非节庆品类（医护用具）对含税总价极度敏感，单纯降价引流却未优化价格感知则适得其反。<br/>
+                • 建议后续将“价格锚点保护+限时氛围”作为常规品类调价标配，复活节后需针对CAPS类目重新设计价值主张。
+            </div>
+            <div class="sub-section-title" style="margin-top: 40px;">📌 核心阶段性复盘结论</div>
+            <div class="insight-card1">
+                <ul>
+                    <li><b>第一阶段（Day 1-4）：震荡失控期。</b> 上税后转化率断崖式下跌40.4%。毛利跌至 -33.31%。</li>
+                    <li><b>第二阶段（Day 5-8）：精准防御期。</b> 针对加购跌幅＞30%的商品调价，纠偏跨档位升价以稳住流量基盘。</li>
+                    <li><b>第三阶段（Day 9-11）：策略纠偏与外因波动期。</b> 3月20日定价回正后毛利率转正，但3月21日复活节物流时效不可达影响，转化再次探底。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 面板3：结账全链路转化监测 (扩展至Day20) -->
+    <div id="panel3" class="panel">
+        <div class="card-white" style="padding: 8px;"><div id="checkout-funnel-chart" class="echarts-box"></div></div>
+        <div class="summary-grid2" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; margin:20px 0;"><div class="insight-card2 warning"><h3>🔴 震荡失控期 (D1-D4)</h3><ul><li>认知负荷：VAT上线导致前端价格突增，CK率从67%跌破60%。</li><li>价格敏感：高价策略直接导致用户在结账入口止步。</li></ul></div><div class="insight-card2"><h3>🔵 精准防御期 (D5-D8)</h3><ul><li>锚点修复：针对Top 100调价后，CK率迅速回升至67%以上。</li><li>心理回流：价格档位趋稳，用户重拾结账信心。</li></ul></div><div class="insight-card2 success"><h3>🟢 纠偏与波动期 (D9-D11)</h3><ul><li>体验优化：取消物流计税后，提交意愿爆发，支付率突破90%。</li><li>物流阻断：复活节时效不可达成为唯一负面变量。</li></ul></div></div>
+        <footer>数据基于222.xlsx扩展至Day20，展示CK率/提交订单率/支付成功率 | 小数点后两位，时间轴为3月12日~3月31日</footer>
+    </div>
+    <footer>多维度趋势看板 · 复活节指标(Day1~20) | VAT调价全复盘 (含关键事件标记) | 结账链路扩展至Day20 | 新增CPC指标(FB/谷歌)</footer>
+</div>
+
+<script>
+    // ======================= 复活节面板数据 (不变) =======================
+    const daysPanel1 = Array.from({length: 20}, (_, i) => `Day${i+1}`);
+    const data26 = {
+        加购率: [0.0679,0.0579,0.0710,0.0482,0.0617,0.0649,0.0647,0.0600,0.0561,0.0456,0.0553,0.0558983666061706,0.0586751849361129,0.0590626848018923,0.0631323350870093,0.0644693951466859,0.0636355881600272,0.0643637208581829,0.0591537494763301,0.0447750518560904],
+        转化率: [0.0263,0.0198,0.0251,0.0160,0.0211,0.0216,0.0236,0.0246,0.0242,0.0188,0.0208,0.0230852994555353,0.0220242098184263,0.0223240685984624,0.0252529340348037,0.0266207895689967,0.0251642071142199,0.0254046936720625,0.0232090490155006,0.0179529361276017],
+        CK率: [0.6873,0.6392,0.6339,0.5994,0.6437,0.6667,0.6731,0.6763,0.6714,0.6402,0.6474,0.677922077922077,0.712034383954154,0.678347934918648,0.67051282051282,0.679775280898876,0.682305630026809,0.657039711191335,0.678470254957507,0.6629392971246],
+        提交订单率: [0.6455,0.6293,0.6538,0.6410,0.6315,0.6268,0.6433,0.6946,0.7057,0.7059,0.6747,0.68007662835249,0.645875251509054,0.653136531365313,0.694072657743785,0.677685950413223,0.673870333988212,0.661172161172161,0.674321503131524,0.653012048192771],
+        支付成功率: [0.8736,0.8483,0.8525,0.8616,0.8421,0.7955,0.8441,0.8740,0.9095,0.9136,0.8595,0.895774647887324,0.81619937694704,0.853107344632768,0.859504132231405,0.896341463414634,0.8600583090379,0.908587257617728,0.857585139318885,0.926199261992619]
+    };
+    const data25Same = {
+        加购率: [0.0810999259162417,0.0835376607734331,0.0847413681344799,0.0812959986464766,0.0806958297337626,0.0812997347480106,0.0847363294837901,0.0846727597436705,0.0911225658648339,0.0877092648435062,0.095733875063484,0.0860321278240701,0.0914949139905203,0.0998343979181452,0.0986489238916423,0.0909218563504879,0.0860186239699872,0.0804967801287948,0.0799524167292762,0.0834053247467211],
+        转化率: [0.0335555846080097,0.0345851077558394,0.0359102890972732,0.0349801201252009,0.0330244247231602,0.032183908045977,0.0342284680673438,0.0348776131946633,0.0380870561282932,0.0371217635437246,0.0380904012188928,0.0313117429774074,0.0363210310486233,0.039981074047788,0.0411433226967207,0.0381942006599733,0.0383868158370737,0.030884478906558,0.031617831204608,0.0346344145134689],
+        CK率: [0.630306286942504,0.623069001029866,0.611422743498215,0.618106139438085,0.61265206812652,0.595976073953235,0.626163108921729,0.633995037220843,0.643620364550597,0.672791938352104,0.660477453580901,0.613080379430853,0.674621653084982,0.678317535545023,0.683413626978664,0.652509652509652,0.67601246105919,0.595102040816326,0.597494126859827,0.657250470809792],
+        提交订单率: [0.684569479965899,0.713223140495867,0.749791492910759,0.735690235690235,0.710087370929309,0.71441605839416,0.698426573426573,0.690802348336594,0.7001953125,0.677533039647577,0.659437751004016,0.647394136807817,0.635893011216566,0.639301310043668,0.646525679758308,0.691124260355029,0.702764976958525,0.689986282578875,0.698558322411533,0.69484240687679],
+        支付成功率: [0.958904109589041,0.931633835457705,0.924360400444938,0.946224256292906,0.940715883668903,0.929757343550447,0.923654568210262,0.940509915014164,0.927475592747559,0.928478543563068,0.913520097442143,0.916981132075471,0.925373134328358,0.923497267759562,0.943925233644859,0.931506849315068,0.939344262295081,0.934393638170974,0.947467166979362,0.909278350515463]
+    };
+    const data25Easter = {
+        加购率: [0.0909,0.0860,0.0805,0.0800,0.0834,0.0911,0.0900,0.0853,0.0834,0.0843,0.0901,0.0866436384571099,0.0844971172325432,0.0803988388236779,0.0853382003207787,0.0829910102994582,0.0816302491312798,0.077391258722913,0.0847557386698057,0.0781712531520666],
+        转化率: [0.0382,0.0384,0.0309,0.0316,0.0346,0.0387,0.0371,0.0355,0.0326,0.0355,0.0365,0.0336067933218192,0.0361306854580397,0.0356556859775337,0.037110779271058,0.0350062511162707,0.0357500441722127,0.0288577574898997,0.0329017068864037,0.0314658480429777],
+        CK率: [0.6525,0.6760,0.5951,0.5975,0.6573,0.6416,0.6531,0.6293,0.6109,0.6416,0.5961,0.612956810631229,0.629264594389689,0.660125588697017,0.646791963707064,0.659971305595408,0.649350649350649,0.587796610169491,0.621527777777777,0.619915848527349],
+        提交订单率: [0.6911,0.7028,0.6900,0.6986,0.6948,0.7226,0.6989,0.7189,0.7184,0.7265,0.7212,0.684281842818428,0.737349397590361,0.72294887039239,0.721442885771543,0.713043478260869,0.747777777777777,0.700115340253748,0.694972067039106,0.702488687782805],
+        支付成功率: [0.9315,0.9393,0.9344,0.9475,0.9093,0.9161,0.9036,0.9199,0.8902,0.9037,0.9429,0.924752475247524,0.92156862745098,0.929276315789473,0.931944444444444,0.896341463414634,0.901931649331352,0.906095551894563,0.898713826366559,0.924315619967793]
+    };
+    
+    function formatPercent(v) { return (v * 100).toFixed(2) + '%'; }
+    function computeAverage(arr) { return formatPercent(arr.reduce((a,b)=>a+b,0)/arr.length); }
+    function updateAverages(metric) { 
+        document.getElementById('avg-2026').innerHTML = computeAverage(data26[metric]); 
+        document.getElementById('avg-2025-same').innerHTML = computeAverage(data25Same[metric]); 
+        document.getElementById('avg-2025-easter').innerHTML = computeAverage(data25Easter[metric]); 
+    }
+    function getDynamicYRange(metric) { 
+        const all = [...data26[metric], ...data25Same[metric], ...data25Easter[metric]]; 
+        const min = Math.min(...all), max = Math.max(...all); 
+        let pad = (max-min)*0.05; 
+        return { min: Math.max(0, min-pad), max: Math.min(1.05, max+pad) }; 
+    }
+    let easterChart = null;
+    function updateEasterChart(metric) { 
+        if(!easterChart) return; 
+        easterChart.data.datasets[0].data = data26[metric]; 
+        easterChart.data.datasets[1].data = data25Same[metric]; 
+        easterChart.data.datasets[2].data = data25Easter[metric]; 
+        const { min, max } = getDynamicYRange(metric); 
+        let stepSize = (max-min) < 0.03 ? 0.005 : ((max-min)<0.05?0.01:0.02); 
+        easterChart.options.scales.y.min = min; 
+        easterChart.options.scales.y.max = max; 
+        easterChart.options.scales.y.ticks.stepSize = stepSize; 
+        easterChart.update(); 
+        updateAverages(metric); 
+    }
+    function createEasterChart(initialMetric) { 
+        const ctx = document.getElementById('easter-chart-canvas').getContext('2d'); 
+        const { min, max } = getDynamicYRange(initialMetric); 
+        let stepSize = (max-min) < 0.03 ? 0.005 : ((max-min)<0.05?0.01:0.02); 
+        easterChart = new Chart(ctx, { 
+            type: 'line', 
+            data: { labels: daysPanel1, datasets: [
+                { label: '2026年', data: data26[initialMetric], borderColor: '#1e293b', borderWidth: 2.5, pointRadius: 3, tension: 0.2 },
+                { label: '2025年同日期', data: data25Same[initialMetric], borderColor: '#2563eb', borderWidth: 2.5, borderDash: [6,6], tension: 0.2 },
+                { label: '2025年复活节同期', data: data25Easter[initialMetric], borderColor: '#dc2626', borderWidth: 2.5, borderDash: [6,6], tension: 0.2 }
+            ] }, 
+            options: { responsive: true, maintainAspectRatio: true, 
+                plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatPercent(ctx.raw)}` } } }, 
+                scales: { y: { min, max, ticks: { callback: (v) => formatPercent(v), stepSize } } } 
+            } 
+        }); 
+        updateAverages(initialMetric); 
+    }
+
+    // ======================= 其他面板日期轴改为具体日期（3月12日~3月31日） =======================
+    // 生成日期标签: 基准 + 3月12日 ~ 3月31日
+    const startDate = new Date(2026, 2, 12); // 3月12日 (month 2)
+    const dateLabels = ['基准(税前)'];
+    for (let i = 0; i < 20; i++) {
+        const d = new Date(2026, 2, 12 + i);
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        dateLabels.push(`${month}月${day}日`);
+    }
+    // 原有扩展数据 (保持数据不变)
+    const extendedDays = ['DAY12','DAY13','DAY14','DAY15','DAY16','DAY17','DAY18','DAY19','DAY20'];
+    const extendedMetrics = {
+        uv: [13775,11896,13528,12355,11044,11723,12911,11935,13981],
+        addCartUV: [770,698,799,780,712,746,831,706,626],
+        ckUV: [522,497,542,523,484,509,546,479,415],
+        submitUV: [355,321,354,363,328,343,361,323,271],
+        payUV: [318,262,302,312,294,295,328,277,251],
+        sales: [14538.4614,12160.2581,14828.5784,14785.5261,14302.6611,13531.0417,15163,12900.6636,11890.1035],
+        avgOrderValue: [45.7184,46.4131,49.1012,47.3895,48.6485,45.8679,46.2286,46.5727,47.3709],
+        roi: [1.7615,1.7524,1.9903,2.0733,2.0804,1.8762,1.9012,1.8208,1.9835],
+        grossProfit: [335.0288,69.4736,1430.161,1834.666,1839.4341,1107.1886,1477.4661,757.2304,913.4076],
+        grossMarginPct: [2.77,0.68,11.57,14.78,15.47,9.77,11.68,7.02,9.21]
+    };
+    const extendedCkRate = extendedMetrics.ckUV.map((v,i) => (v / extendedMetrics.uv[i]) * 100);
+    const extendedSubmitRate = extendedMetrics.submitUV.map((v,i) => (v / extendedMetrics.ckUV[i]) * 100);
+    const extendedPayRate = extendedMetrics.payUV.map((v,i) => (v / extendedMetrics.submitUV[i]) * 100);
+    const extendedAddCartRate = extendedMetrics.addCartUV.map((v,i) => (v / extendedMetrics.uv[i]) * 100);
+    const extendedConversionRate = extendedMetrics.payUV.map((v,i) => (v / extendedMetrics.uv[i]) * 100);
+    
+    // 原始Day1~Day11数据 (对应3月12日~3月22日)
+    const originalCrData = [2.63,1.98,2.51,1.60,2.11,2.16,2.36,2.46,2.42,1.88,2.08];
+    const originalAddCartData = [6.79,5.79,7.10,4.82,6.17,6.49,6.47,6.00,5.61,4.56,5.53];
+    const originalMarginData = [5.75,-10.15,0.96,-33.31,-5.18,-4.63,5.31,3.87,6.59,5.30,4.25];
+    const baseCr = 3.71, baseAddCart = 9.28, baseMargin = 12.65;
+    const fullCrData = [baseCr, ...originalCrData, ...extendedConversionRate.map(v => Number((v).toFixed(2)))];
+    const fullAddCartData = [baseAddCart, ...originalAddCartData, ...extendedAddCartRate.map(v => Number((v).toFixed(2)))];
+    const fullMarginData = [baseMargin, ...originalMarginData, ...extendedMetrics.grossMarginPct.map(v => Number(v.toFixed(2)))];
+    
+    // 结账链路数据
+    const originalCkBase = 67.00, originalSubmitBase = 65.00, originalPayBase = 86.00;
+    const dayCkRate = [68.73,63.92,63.39,59.94,64.37,66.67,67.31,67.63,67.14,64.02,64.74,67.79,71.2,67.83,67.05,67.98,68.23,65.7,67.85,66.29];
+    const daySubmitRate = [64.55,62.93,65.38,64.10,63.15,62.68,64.33,69.46,70.57,70.59,67.47];
+    const dayPayRate = [87.36,84.83,85.25,86.16,84.21,79.55,84.41,87.40,90.95,91.36,85.95];
+    const fullCkRate = [originalCkBase, ...dayCkRate, ...extendedCkRate.map(v => Number(v.toFixed(2)))];
+    const fullSubmitRate = [originalSubmitBase, ...daySubmitRate, ...extendedSubmitRate.map(v => Number(v.toFixed(2)))];
+    const fullPayRate = [originalPayBase, ...dayPayRate, ...extendedPayRate.map(v => Number(v.toFixed(2)))];
+    
+    // 核心指标数据
+    const originalCore = { 浏览人数: [28619.57, 29674, 29145, 23039, 32763, 17426, 16220, 16026, 13232, 14970, 15723, 15016], 销售额: [43892.41, 34432.22, 27938.91, 29706.53, 26053.15, 18369.93, 16104.03, 18244.2, 16114.21, 17017.85, 13832.53, 15602.29], 客单价: [35.05, 37.29, 41.03, 43.25, 42.21, 42.31, 38.32, 40.45, 41.63, 39.72, 40.40, 43.09], ROI: [1.61, 1.54, 1.35, 1.62, 1.10, 1.47, 1.53, 1.75, 1.70, 1.86, 1.78, 1.71], 毛利润: [5563.91, 1829, -2356, 241, -7290, -792, -623, 808, 523, 935, 615, 553] };
+    const fullCore = { 浏览人数: [...originalCore.浏览人数, ...extendedMetrics.uv.map(v => Number(v))], 销售额: [...originalCore.销售额, ...extendedMetrics.sales.map(v => Number(v.toFixed(2)))], 客单价: [...originalCore.客单价, ...extendedMetrics.avgOrderValue.map(v => Number(v.toFixed(2)))], ROI: [...originalCore.ROI, ...extendedMetrics.roi.map(v => Number(v.toFixed(4)))], 毛利润: [...originalCore.毛利润, ...extendedMetrics.grossProfit.map(v => Number(v.toFixed(2)))] };
+    const fbCpcBase = 0.66, googleCpcBase = 1.22;
+    const fbCpcDay = [0.6532,0.6278,0.5987,0.3898,0.4935,0.5314,0.5248,0.5403,0.538,0.533,0.5168,0.4553,0.447,0.4414,0.4636,0.4573,0.4709,0.4549,0.4465,0.438];
+    const googleCpcDay = [1.0945,1.0374,0.9695,0.9048,0.9157,0.8843,0.8746,0.9098,0.8913,0.8477,0.8592,0.8915,0.8459,0.7989,0.8712,0.8316,0.8997,0.9114,0.8647,0.8216];
+    const fullFbCpc = [fbCpcBase, ...fbCpcDay];
+    const fullGoogleCpc = [googleCpcBase, ...googleCpcDay];
+    const coreMetricsMap = { 浏览人数: fullCore.浏览人数, 销售额: fullCore.销售额, 客单价: fullCore.客单价, ROI: fullCore.ROI, 毛利润: fullCore.毛利润, FBCPC: fullFbCpc, 谷歌CPC: fullGoogleCpc };
+    
+    let vatChart=null, coreMetricsChart=null, checkoutChart=null;
+    
+    // VAT图表（含关键事件标记，标记位置改用具体日期字符串）
+    function initVatChart() { 
+        const dom=document.getElementById('vat-strategy-chart'); 
+        if(!dom) return; 
+        vatChart=echarts.init(dom); 
+        const markLineData = [
+            { xAxis: '3月12日', name: '全链路上税', lineStyle: { color: '#fa8c16', type: 'dashed', width: 2 }, label: { show: true, formatter: '🔻 VAT上线', position: 'end' } },
+            { xAxis: '3月16日', name: 'Top10调价', lineStyle: { color: '#fa8c16', type: 'dashed' }, label: { show: true, formatter: '🔻 精准调价', position: 'end' } },
+            { xAxis: '3月20日', name: '策略纠偏', lineStyle: { color: '#52c41a', type: 'dashed' }, label: { show: true, formatter: '🔻 策略纠偏', position: 'end' } },
+            { xAxis: '3月21日', name: '时效不可达', lineStyle: { color: '#ff4d4f', type: 'dashed' }, label: { show: true, formatter: '⚠️ 物流阻断', position: 'end' } },
+            { xAxis: '3月30日', name: '3.30支付与物流调整', lineStyle: { color: '#ff4d4f', type: 'dashed' }, label: { show: true, formatter: '🔻 全站Paypal快捷支付调整\n🔻 购物车PP支付物流选择', position: 'end' } }
+        ];
+        vatChart.setOption({ 
+            title:{ text:'英国站 VAT 策略调整与运营全链路分析 (扩展至3月31日)', subtext:'转化率/加购率/毛利率 | 基于222.xlsx扩展', left:'center' }, 
+            tooltip:{ trigger:'axis' }, 
+            legend:{ data:['转化率','加购率','毛利率'], top:50 }, 
+            xAxis:{ type:'category', data:dateLabels, axisLabel:{ rotate:35, interval:2, fontSize:10 } }, 
+            yAxis:[{ type:'value', name:'比率 (%)', min:-5, max:20 },{ type:'value', name:'毛利 (%)', min:-40, max:25 }], 
+            series:[
+                { name:'转化率', type:'line', yAxisIndex:0, data:fullCrData, lineStyle:{ width:2.5, color:'#1890ff' }, markLine: { data: markLineData, symbol: 'none' } }, 
+                { name:'加购率', type:'line', yAxisIndex:0, data:fullAddCartData, lineStyle:{ width:2.5, color:'#722ed1' } }, 
+                { name:'毛利率', type:'bar', yAxisIndex:1, data:fullMarginData, itemStyle:{ color:(p)=>p.value<0?'#ff4d4f':'#52c41a' }, label:{ show:true, formatter:(p)=>p.value.toFixed(1)+'%' } }
+            ] 
+        }); 
+    }
+    
+    function renderCoreMetrics(metricKey) { 
+        if(!coreMetricsChart) return; 
+        const seriesData=coreMetricsMap[metricKey]; 
+        let yAxisName=''; 
+        if(metricKey==='浏览人数') yAxisName='浏览人数 (人次)'; 
+        else if(metricKey==='销售额') yAxisName='销售额 ($)'; 
+        else if(metricKey==='客单价') yAxisName='客单价 ($)'; 
+        else if(metricKey==='ROI') yAxisName='投产比 (ROI)'; 
+        else if(metricKey==='毛利润') yAxisName='毛利润 ($)'; 
+        else if(metricKey==='FBCPC') yAxisName='FB CPC ($)'; 
+        else if(metricKey==='谷歌CPC') yAxisName='谷歌 CPC ($)'; 
+        coreMetricsChart.setOption({ 
+            tooltip:{ trigger:'axis' }, 
+            xAxis:{ type:'category', data:dateLabels, axisLabel:{ rotate:35, interval:2, fontSize:10 } }, 
+            yAxis:{ type:'value', name:yAxisName }, 
+            series:[{ name:metricKey, type:'line', data:seriesData, smooth:false, symbol:'circle', lineStyle:{ width:2.5 }, label:{ show:true, position:'top', fontSize:9 } }] 
+        }, true); 
+    }
+    function initCoreMetricsChart() { const dom=document.getElementById('core-metrics-trend-chart'); if(!dom) return; if(coreMetricsChart) coreMetricsChart.dispose(); coreMetricsChart=echarts.init(dom); renderCoreMetrics(document.getElementById('coreMetricSelector').value); }
+    
+    function initCheckoutChart() { 
+        const dom=document.getElementById('checkout-funnel-chart'); 
+        if(!dom) return; 
+        checkoutChart=echarts.init(dom); 
+        checkoutChart.setOption({ 
+            title:{ text:'英国站结账全链路转化深度监测 (扩展至3月31日)', subtext:'CK率 / 提交订单率 / 支付成功率 | 基于222.xlsx追加数据', left:'center' }, 
+            tooltip:{ trigger:'axis' }, 
+            legend:{ data:['CK率 (ck/加购)','提交订单率 (提交/CK)','支付成功率'], bottom:10 }, 
+            xAxis:{ type:'category', data:dateLabels, axisLabel:{ rotate:35, interval:2 } }, 
+            yAxis:{ type:'value', min:50, max:98, axisLabel:{ formatter:'{value}%' } }, 
+            series:[
+                { name:'CK率 (ck/加购)', type:'line', data:fullCkRate, lineStyle:{ width:3, color:'#1890ff' }, label:{ show:true, formatter:(p)=>p.value.toFixed(1)+'%' } }, 
+                { name:'提交订单率 (提交/CK)', type:'line', data:fullSubmitRate, lineStyle:{ width:2.5, type:'dashed', color:'#722ed1' }, label:{ show:true, formatter:(p)=>p.value.toFixed(1)+'%' } }, 
+                { name:'支付成功率', type:'line', data:fullPayRate, lineStyle:{ width:2.5, color:'#52c41a' }, label:{ show:true, formatter:(p)=>p.value.toFixed(1)+'%' } }
+            ] 
+        }); 
+    }
+    
+    const panels=document.querySelectorAll('.panel'); const btns=document.querySelectorAll('.tab-btn'); 
+    let vatInit=false, checkoutInit=false, coreInit=false;
+    function switchPanel(panelId){ 
+        panels.forEach(p=>p.classList.remove('active-panel')); 
+        document.getElementById(panelId).classList.add('active-panel'); 
+        if(panelId==='panel2'){ 
+            if(!vatInit){ initVatChart(); vatInit=true; } else if(vatChart) vatChart.resize(); 
+            if(!coreInit){ initCoreMetricsChart(); coreInit=true; } else if(coreMetricsChart) coreMetricsChart.resize(); 
+        } else if(panelId==='panel3'){ 
+            if(!checkoutInit){ initCheckoutChart(); checkoutInit=true; } else if(checkoutChart) checkoutChart.resize(); 
+        } else if(panelId==='panel1'){ 
+            if(easterChart) easterChart.resize(); 
+        } 
+    }
+    btns.forEach(btn=>{ btn.addEventListener('click',()=>{ const target=btn.getAttribute('data-panel'); btns.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); switchPanel(target); }); });
+    createEasterChart('加购率');
+    document.getElementById('metric-selector').addEventListener('change', (e) => updateEasterChart(e.target.value));
+    document.getElementById('coreMetricSelector').addEventListener('change', (e) => { if(coreMetricsChart) renderCoreMetrics(e.target.value); });
+    window.addEventListener('resize', () => { if(easterChart) easterChart.resize(); if(vatChart && document.getElementById('panel2').classList.contains('active-panel')) vatChart.resize(); if(checkoutChart && document.getElementById('panel3').classList.contains('active-panel')) checkoutChart.resize(); if(coreMetricsChart && document.getElementById('panel2').classList.contains('active-panel')) coreMetricsChart.resize(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>美国站 Sales Tax 数据波动复盘看板</title>
+    <script src="https://cdn.staticfile.org/echarts/5.4.3/echarts.min.js"></script>
+    <style>
+        body { background-color: #f0f2f5; margin: 0; padding: 20px; font-family: "PingFang SC", sans-serif; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .page-title {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #262626;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .nav-tabs { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            background: #fff; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .nav-btn {
+            padding: 10px 24px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #595959;
+            transition: all 0.3s;
+        }
+        .nav-btn.active {
+            background: #1890ff;
+            color: #fff;
+            border-color: #1890ff;
+            box-shadow: 0 2px 8px rgba(24,144,255,0.3);
+        }
+
+        .chart-box { 
+            width: 100%; height: 700px; background: #fff; padding: 25px; 
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; 
+        }
+        .insight-card { 
+            margin-top: 20px; background: #fff; padding: 20px; border-radius: 12px; 
+            border-left: 6px solid #1890ff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .dimension-content { display: none; }
+        .dimension-content.active { display: block; }
+        
+        /* 新增切片器图表卡片样式 */
+        .slicer-chart-card {
+            margin-top: 28px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .slicer-header {
+            background: #fafafa;
+            padding: 14px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .slicer-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f1f1f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .slicer-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .slicer-btn {
+            padding: 6px 16px;
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #595959;
+        }
+        .slicer-btn.active {
+            background: #1890ff;
+            border-color: #1890ff;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(24,144,255,0.2);
+        }
+        .slicer-btn:hover:not(.active) {
+            border-color: #40a9ff;
+            color: #1890ff;
+        }
+        .slicer-chart-container {
+            width: 100%;
+            height: 450px;
+            padding: 20px 20px 10px 20px;
+            box-sizing: border-box;
+        }
+        .section-divider {
+            margin: 24px 0 8px 0;
+            border-top: 1px solid #e8e8e8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="page-title">美国站消费税策略时间线分析</h1>
+
+    <div class="nav-tabs">
+        <button class="nav-btn active" onclick="switchDim(1)">维度一：转化/加购/毛利趋势</button>
+        <button class="nav-btn" onclick="switchDim(2)">维度二：结算端提交与支付表现</button>
+    </div>
+
+    <div id="dim-1" class="dimension-content active">
+        <!-- 原始维度一图表 -->
+        <div id="main-1" class="chart-box"></div>
+        
+        <!-- 新增带切片器的图表：展示附件五种核心数据（浏览人数/销售额/ROI/毛利润/客单价） -->
+        <div class="slicer-chart-card">
+            <div class="slicer-header">
+                <h3>📈 核心经营指标趋势（切片器切换）</h3>
+                <div class="slicer-buttons" id="metric-slicer">
+                    <button data-metric="browse" class="slicer-btn">👥 浏览人数</button>
+                    <button data-metric="sales" class="slicer-btn active">💰 销售额</button>
+                    <button data-metric="roi" class="slicer-btn">📊 ROI</button>
+                    <button data-metric="profit" class="slicer-btn">💎 毛利润</button>
+                    <button data-metric="atv" class="slicer-btn">🛒 客单价</button>
+                </div>
+            </div>
+            <div id="slicer-chart" class="slicer-chart-container"></div>
+        </div>
+
+        <!-- 原始复盘结论，完全保留未改动 -->
+        <div class="insight-card">
+            <h3 style="color:#0050b3; margin-top:0;">📊 美国站 Sales Tax 自然波动复盘报告 (核心指标)</h3>
+            <ul style="font-size:14px; line-height:1.8; color:#444;">
+                <li><b>1. 转化率表现稳健：</b> 相比税前基准（3.56%），上线后整体维持在 3.1% 以上。</li>
+                <li><b>2. 毛利率自然波动：</b> 随订单区域自然分布，Day 9 达到 26.45% 峰值。</li>
+                <li><b>3. 加购意愿维持高位：</b> 全周期保持在 9.4% 以上，前端流量质量未见滑坡。</li>
+                <li><b>4. 复活节效应：</b> 3月19日（Day 8）由于是物流经济线可达复活节的最后日期，出现明显的节前抢单冲单。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="dim-2" class="dimension-content">
+        <div id="main-2" class="chart-box"></div>
+        <div class="insight-card" style="border-left-color: #722ed1;">
+            <h3 style="color:#391085; margin-top:0;">🔍 结算端行为深度分析 (含基准线对比)</h3>
+            <ul style="font-size:14px; line-height:1.8; color:#444;">
+                <li><b>1. 基准对照：</b> 橙色虚线为提交订单率基准 (63.32%)，紫色虚线为支付成功率基准 (92.26%)。</li>
+                <li><b>2. 提交订单率：</b> 初期受税费显性化影响在基准线下震荡，Day 9 出现明显突破。</li>
+                <li><b>3. 支付成功率：</b> 整体波幅极小，紧贴基准线运行，说明税费未造成支付环节的心理抵触。</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var chart1, chart2, chart3;  // chart3 切片器图表
+    // 原始维度一使用的 days 数组（完全沿用，保持一致性）
+    const days = ['基准(税前7天)', '3月12日 (Day 1)', '3月13日 (Day 2)', '3月14日 (Day 3)', '3月15日 (Day 4)', '3月16日 (Day 5)', '3月17日 (Day 6)', '3月18日 (Day 7)', '3月19日 (Day 8)', '3月20日 (Day 9)', '3月21日 (Day 10)', '3月22日 (Day 11)'];
+
+    // ======================= 附件数据：五种核心指标（完全基于Excel提供）=======================
+    // 浏览人数 (单位：人)
+    const browseData = [122995, 110770, 105401, 92556, 98726, 92189, 94832, 90000, 85112, 80343, 68372, 72896];
+    // 销售额 (单位：美元)
+    const salesData = [178913.29, 178445.12, 173738.78, 152738.66, 155733.38, 141697.26, 134119.7, 136208.62, 132054.57, 129431.46, 113026.93, 107242.66];
+    // ROI (投资回报率，小数)
+    const roiData = [1.90, 1.85, 2.03, 2.12, 2.01, 1.97, 1.89, 2.06, 2.14, 2.25, 2.11, 1.82];
+    // 毛利润 (单位：美元)
+    const profitData = [34034.61, 29828.7, 34033.07, 31134.11, 28440.62, 27113.61, 20533.58, 26686.41, 29300.69, 32610.97, 24327.49, 14459.28];
+    // 客单价 (单位：美元)
+    const atvData = [44.97, 45.03, 47.15, 48.78, 48.04, 46.72, 46.31, 46.06, 47.85, 47.85, 48.55, 47.39];
+
+    // 指标映射，用于切片器动态渲染及格式化
+    const metricMap = {
+        browse: { name: '浏览人数', unit: '人', data: browseData, yName: '浏览人数 (人)' },
+        sales: { name: '销售额', unit: '美元', data: salesData, yName: '销售额 (USD)' },
+        roi: { name: 'ROI', unit: '', data: roiData, yName: 'ROI' },
+        profit: { name: '毛利润', unit: '美元', data: profitData, yName: '毛利润 (USD)' },
+        atv: { name: '客单价', unit: '美元', data: atvData, yName: '客单价 (USD)' }
+    };
+
+    // 当前选中的指标key
+    let currentMetric = 'sales';
+
+    // 初始化切片器图表 (chart3)
+    function initSlicerChart() {
+        if (chart3) {
+            chart3.dispose();
+        }
+        const dom = document.getElementById('slicer-chart');
+        if (dom) {
+            chart3 = echarts.init(dom);
+            renderSlicerChart(currentMetric);
+        }
+    }
+
+    // 根据选中的指标渲染图表（客单价Y轴30-50，并移除底部日期选择滑块）
+    function renderSlicerChart(metricKey) {
+        if (!chart3) return;
+        const metric = metricMap[metricKey];
+        if (!metric) return;
+        
+        const seriesData = metric.data;
+        const isROI = metricKey === 'roi';
+        const isATV = metricKey === 'atv';
+        
+        // 动态格式化数值显示（tooltip及y轴）
+        const yAxisFormatter = function(value) {
+            if (isROI) return value.toFixed(2);
+            if (metricKey === 'browse') return Math.round(value).toLocaleString();
+            if (metricKey === 'sales' || metricKey === 'profit') return '$' + value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (metricKey === 'atv') return '$' + value.toFixed(2);
+            return value;
+        };
+        
+        // Y轴配置：针对客单价强制设定范围 30~50
+        let yAxisConfig = {
+            type: 'value',
+            name: metric.yName,
+            nameLocation: 'middle',
+            nameGap: 45,
+            axisLabel: {
+                formatter: yAxisFormatter
+            },
+            splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
+        };
+        
+        if (isATV) {
+            yAxisConfig.min = 30;
+            yAxisConfig.max = 50;
+            // 可选：让刻度更友好
+            yAxisConfig.interval = 5;
+        }
+        
+        const option = {
+            title: {
+                show: false
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function(params) {
+                    if (!params || params.length === 0) return '';
+                    const point = params[0];
+                    const value = point.value;
+                    let valueStr = '';
+                    if (metricKey === 'roi') {
+                        valueStr = value.toFixed(2);
+                    } else if (metricKey === 'browse') {
+                        valueStr = Math.round(value).toLocaleString();
+                    } else if (metricKey === 'sales' || metricKey === 'profit') {
+                        valueStr = '$' + value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    } else if (metricKey === 'atv') {
+                        valueStr = '$' + value.toFixed(2);
+                    } else {
+                        valueStr = value;
+                    }
+                    return `<strong>${point.axisValue}</strong><br/>${metric.name}: ${valueStr} ${metric.unit ? metric.unit : ''}`;
+                }
+            },
+            grid: {
+                left: '8%',
+                right: '5%',
+                top: 40,
+                bottom: 40,
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: days,
+                axisLabel: {
+                    rotate: 30,
+                    fontWeight: 400,
+                    fontSize: 11,
+                    interval: 0,
+                    margin: 12
+                },
+                axisLine: { lineStyle: { color: '#8c8c8c' } }
+            },
+            yAxis: yAxisConfig,
+            series: [{
+                name: metric.name,
+                type: 'line',
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                data: seriesData,
+                lineStyle: { width: 3, color: '#3b8cff', shadowBlur: 8 },
+                itemStyle: { color: '#3b8cff', borderColor: '#ffffff', borderWidth: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(59, 140, 255, 0.25)' },
+                        { offset: 1, color: 'rgba(59, 140, 255, 0.02)' }
+                    ])
+                },
+                label: {
+                    show: true,
+                    position: 'top',
+                    fontSize: 10,
+                    formatter: function(params) {
+                        let val = params.value;
+                        if (metricKey === 'roi') return val.toFixed(2);
+                        if (metricKey === 'browse') return Math.round(val).toLocaleString();
+                        if (metricKey === 'sales' || metricKey === 'profit') return '$' + val.toFixed(0);
+                        if (metricKey === 'atv') return '$' + val.toFixed(1);
+                        return val;
+                    },
+                    offset: [0, 8],
+                    color: '#2c3e50'
+                },
+                markPoint: {
+                    data: [
+                        { type: 'max', name: '峰值' },
+                        { type: 'min', name: '谷值' }
+                    ],
+                    symbolSize: 40,
+                    label: { formatter: function(params) {
+                        let val = params.value;
+                        if (metricKey === 'roi') return '峰值:' + val.toFixed(2);
+                        if (metricKey === 'browse') return '峰值:' + Math.round(val).toLocaleString();
+                        if (metricKey === 'sales' || metricKey === 'profit') return '峰值:$' + val.toFixed(0);
+                        if (metricKey === 'atv') return '峰值:$' + val.toFixed(1);
+                        return '峰值:' + val;
+                    } }
+                }
+            }],
+            toolbox: {
+                feature: {
+                    saveAsImage: { title: '保存图片' },
+                    // 保留 dataZoom 按钮，但该按钮不影响底部滑块，只提供框选缩放功能，符合移除“底部日期选择”的要求
+                    dataZoom: { title: { zoom: '区域缩放', back: '还原' } }
+                },
+                right: 20
+            },
+            // 移除底部日期选择滑块: 完全删除 dataZoom 数组，仅依靠 toolbox 的按钮进行交互缩放，无底部 UI 滑块
+            dataZoom: []   // 之前有 slider + inside，现在完全移除底部日期选择器，用户体验依靠 toolbox 缩放按钮或鼠标框选
+        };
+        chart3.setOption(option, true);
+    }
+
+    // 绑定切片器按钮点击事件，切换指标并更新样式
+    function bindSlicerEvents() {
+        const buttons = document.querySelectorAll('#metric-slicer .slicer-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const metric = this.getAttribute('data-metric');
+                if (!metric || metric === currentMetric) return;
+                // 更新active样式
+                buttons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMetric = metric;
+                renderSlicerChart(currentMetric);
+            });
+        });
+    }
+
+    // ================= 原始维度一图表（完全保留原有实现） =================
+    function initChart1() {
+        chart1 = echarts.init(document.getElementById('main-1'));
+        const crData = [3.56, 3.58, 3.50, 3.38, 3.28, 3.29, 3.05, 3.29, 3.24, 3.37, 3.40, 3.10]; 
+        const addCartData = [11.20, 11.70, 11.38, 11.16, 11.46, 11.01, 9.82, 10.49, 10.22, 9.49, 10.45, 10.61]; 
+        const marginData = [19.09, 16.96, 20.57, 21.42, 19.17, 20.12, 16.09, 20.57, 23.32, 26.45, 22.60, 14.14]; 
+
+        chart1.setOption({
+            title: { text: '维度一：转化/加购/毛利趋势复盘', left: 'center' },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+            legend: { data: ['转化率', '加购率', '毛利率'], top: 30 },
+            xAxis: { type: 'category', data: days, axisLabel: { rotate: 25 } },
+            yAxis: [{ type: 'value', name: '比例 (%)' }, { type: 'value', name: '毛利 (%)', max: 30 }],
+            series: [
+                { 
+                    name: '转化率', type: 'line', smooth: true, data: crData, label: {show: true},
+                    markLine: {
+                        symbol: ['none', 'pin'],
+                        data: [{
+                            xAxis: '3月19日 (Day 8)',
+                            name: '复活节物流截单',
+                            label: {
+                                position: 'end',
+                                formatter: '⚠️ 3/19 复活节经济线\n可达最后日期',
+                                backgroundColor: 'rgba(255,255,255,0.8)',
+                                padding: [4, 6],
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                color: '#f5222d'
+                            },
+                            lineStyle: { color: '#f5222d', type: 'dashed', width: 2 }
+                        }]
+                    }
+                },
+                { name: '加购率', type: 'line', smooth: true, data: addCartData },
+                { name: '毛利率', type: 'bar', yAxisIndex: 1, barWidth: '35%', data: marginData, itemStyle: {color: '#52c41a'} }
+            ]
+        });
+    }
+
+    // 维度二图表（保持不变）
+    function initChart2() {
+        chart2 = echarts.init(document.getElementById('main-2'));
+        const submitOrderData = [63.32, 61.58, 61.72, 61.14, 59.78, 60.82, 61.99, 61.63, 60.81, 64.59, 62.21, 58.50];
+        const paySuccessData = [92.26, 91.15, 91.51, 90.18, 90.01, 89.71, 90.42, 90.59, 91.21, 92.51, 91.55, 89.73];
+
+        chart2.setOption({
+            title: { 
+                text: '维度二：结算端提交订单率与支付成功率对比', 
+                subtext: '关注用户在看到税费后的最终决策行为', 
+                left: 'center',
+                subtextStyle: { fontSize: 13, color: '#666' },
+                itemGap: 15 
+            },
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['提交订单率', '支付成功率'], top: 60 },
+            grid: { top: '22%', bottom: '10%', left: '5%', right: '5%', containLabel: true },
+            xAxis: { type: 'category', data: days, axisLabel: { rotate: 25 } },
+            yAxis: [
+                { type: 'value', name: '提交率 (%)', min: 55, max: 70 },
+                { type: 'value', name: '支付成功率 (%)', min: 88, max: 95 }
+            ],
+            series: [
+                { 
+                    name: '提交订单率', type: 'line', symbolSize: 8,
+                    lineStyle: { width: 3, color: '#fa8c16' },
+                    itemStyle: { color: '#fa8c16' },
+                    data: submitOrderData,
+                    markLine: {
+                        symbol: 'none',
+                        data: [{ yAxis: 63.32, name: '提交率基准' }],
+                        lineStyle: { type: 'dashed', color: '#fa8c16', width: 2 },
+                        label: { position: 'end', formatter: '基准: 63.32%' }
+                    }
+                },
+                { 
+                    name: '支付成功率', type: 'line', yAxisIndex: 1, symbolSize: 8,
+                    lineStyle: { width: 3, color: '#722ed1' },
+                    itemStyle: { color: '#722ed1' },
+                    data: paySuccessData,
+                    markLine: {
+                        symbol: 'none',
+                        data: [{ yAxis: 92.26, name: '支付基准' }],
+                        lineStyle: { type: 'dashed', color: '#722ed1', width: 2 },
+                        label: { position: 'end', formatter: '基准: 92.26%' }
+                    }
+                }
+            ]
+        });
+    }
+
+    // 维度切换函数（保证切片器图表在维度一可见时自适应）
+    function switchDim(idx) {
+        document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx - 1));
+        document.querySelectorAll('.dimension-content').forEach((content, i) => content.classList.toggle('active', i === idx - 1));
+        if(idx === 1) {
+            if(chart1) chart1.resize();
+            if(chart3) chart3.resize();   // 切片器图表自适应
+        }
+        if(idx === 2) {
+            if(!chart2) initChart2();
+            if(chart2) chart2.resize();
+        }
+    }
+
+    // 窗口resize全局处理
+    window.addEventListener('resize', function() {
+        if(chart1) chart1.resize();
+        if(chart2) chart2.resize();
+        if(chart3) chart3.resize();
+    });
+
+    // 页面启动初始化
+    window.onload = function() {
+        initChart1();          // 原有维度一图表
+        initSlicerChart();    // 切片器图表（客单价Y轴30-50，无底部滑块）
+        bindSlicerEvents();   // 绑定指标切换
+        // 确保维度一激活时图表3显示正确
+        if(chart3) {
+            renderSlicerChart(currentMetric);
+        }
+    };
+</script>
+</body>
+</html>

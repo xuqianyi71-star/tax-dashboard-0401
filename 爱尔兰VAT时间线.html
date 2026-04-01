@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>爱尔兰站 VAT 策略调整全链路深度复盘</title>
+    <script src="https://cdn.staticfile.org/echarts/5.4.3/echarts.min.js"></script>
+    <style>
+        body { background-color: #f0f2f5; margin: 0; padding: 20px; font-family: "PingFang SC", sans-serif; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        #main { 
+            width: 100%; height: 750px; background: #fff; padding: 25px; 
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; 
+        }
+        .insight-card { 
+            margin-top: 20px; background: #fff; padding: 20px; border-radius: 12px; 
+            border-left: 6px solid #1890ff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="main"></div>
+    <div class="insight-card">
+        <h3 style="color:#003eb3; margin-top:0;">📊 爱尔兰站核心阶段性复盘结论</h3>
+        <ul style="font-size:14px; line-height:1.8; color:#444;">
+            <li><b>第一阶段（Day 1-4）：策略冲击与市场冷感。</b> 3月12日上线23% VAT后，由于前端价格突增且保留了税费描述，转化率从3.71%基准迅速腰斩。Day 4（周日）即便流量上升，但转化仅1.63%，毛利跌至-53%，证明在无干预情况下，显性税费对爱尔兰站点的杀伤力巨大。</li>
+            <li><b>第二阶段（Day 5-8）：改价试水与外部扰动。</b> 3月16日（Day 5）实施首轮热卖品改价后，转化率成功止跌并连续三日小幅回升。值得注意的是，3月19日受<b>复活节物流不可达</b>预期的心理暗示，虽然转化达高峰（2.45%），但用户决策带有明显的节前抢单性质。</li>
+            <li><b>第三阶段（Day 9-11）：深度去税化的瓶颈与流量制约。</b> 3月20日（Day 9）执行“去税描述+二次改价”等全链路优化后，数据并**没有出现预期中的强力拉升**。分析认为，由于爱尔兰站点基础流量较少，个别热卖品的自然波动远超调价影响，导致系统性纠偏在该站点的反馈较弱，模型进入了低效平衡期。</li>
+        </ul>
+    </div>
+</div>
+
+<script type="text/javascript">
+    window.onload = function() {
+        var myChart = echarts.init(document.getElementById('main'));
+
+        const days = [
+            '基准 (税前)', '3月12日 (Day 1)', '3月13日 (Day 2)', '3月14日 (Day 3)', 
+            '3月15日 (Day 4)', '3月16日 (Day 5)', '3月17日 (Day 6)', '3月18日 (Day 7)', 
+            '3月19日 (Day 8)', '3月20日 (Day 9)', '3月21日 (Day 10)', '3月22日 (Day 11)'
+        ];
+        
+        const crData = [3.71, 2.88, 2.46, 1.95, 1.63, 1.80, 1.76, 1.86, 2.45, 1.53, 1.71, 1.38]; 
+        const addCartData = [9.91, 9.08, 7.37, 6.93, 5.11, 5.62, 6.13, 5.84, 6.81, 4.54, 4.51, 4.61]; 
+        const marginData = [9.44, -6.06, -14.01, -36.61, -53.00, -23.23, -23.16, -6.78, 18.33, -11.80, 1.78, -28.53]; 
+
+        var option = {
+            title: { text: '爱尔兰站 VAT 策略调整与运营全链路分析', subtext: '运营动作（标注显化版）', left: 'center' },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'cross' }
+            },
+            legend: { data: ['转化率', '加购率', '毛利率'], top: 50 },
+            grid: { top: '20%', left: '5%', right: '5%', bottom: '10%', containLabel: true },
+            xAxis: { type: 'category', data: days, axisLabel: { rotate: 25, fontWeight: 'bold' } },
+            yAxis: [
+                { type: 'value', name: '比例 (%)', min: 0, max: 12, axisLabel: { formatter: '{value}%' } },
+                { type: 'value', name: '毛利 (%)', min: -60, max: 25, axisLabel: { formatter: '{value}%' } }
+            ],
+            series: [
+                {
+                    name: '转化率', type: 'line', smooth: true, yAxisIndex: 0, 
+                    lineStyle: { width: 4, color: '#1890ff' }, symbolSize: 8, data: crData,
+                    label: { show: true, position: 'top', formatter: '{c}%' },
+                    // 新增 markArea 标注复活节不可达影响时段
+                    markArea: {
+                        silent: true,
+                        itemStyle: {
+                            color: 'rgba(245, 34, 45, 0.08)'
+                        },
+                        data: [[{
+                            name: '复活节物流不可达影响期',
+                            xAxis: '3月18日 (Day 7)',
+                            label: {
+                                position: 'top',
+                                color: '#cf1322',
+                                fontStyle: 'italic'
+                            }
+                        }, {
+                            xAxis: '3月20日 (Day 9)'
+                        }]]
+                    },
+                    markLine: {
+                        symbol: ['none', 'pin'],
+                        lineStyle: { type: 'dashed', width: 1.5, opacity: 0.7 },
+                        label: { 
+                            show: true, 
+                            position: 'end', 
+                            formatter: '{b}',
+                            fontSize: 11,
+                            color: '#333',
+                            backgroundColor: 'rgba(255,255,255,0.9)',
+                            padding: [4, 8],
+                            borderRadius: 4,
+                            borderWidth: 1,
+                            distance: [0, 10]
+                        },
+                        data: [
+                            { xAxis: '3月12日 (Day 1)', name: '🚀 VAT上线\n(加征23%税)', lineStyle: { color: '#ff4d4f' } },
+                            { xAxis: '3月16日 (Day 5)', name: '⚖️ 首次改价\n(牺牲毛利抢流)', lineStyle: { color: '#fa8c16' } },
+                            { xAxis: '3月19日 (Day 8)', name: '⚠️ 复活节影响\n(节前冲单脉冲)', lineStyle: { color: '#f5222d', width: 2.5 } },
+                            { xAxis: '3月20日 (Day 9)', name: '🛠️ 全链路优化\n(反馈较弱)', lineStyle: { color: '#52c41a' } }
+                        ]
+                    }
+                },
+                { name: '加购率', type: 'line', smooth: true, yAxisIndex: 0, lineStyle: { width: 4, color: '#722ed1' }, data: addCartData },
+                {
+                    name: '毛利率', type: 'bar', yAxisIndex: 1, barWidth: '35%',
+                    itemStyle: { color: p => p.value < 0 ? '#ff7875' : '#73d13d', opacity: 0.8 },
+                    data: marginData
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+        window.onresize = myChart.resize;
+    };
+</script>
+</body>
+</html>
